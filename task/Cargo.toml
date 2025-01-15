@@ -5,3 +5,6 @@ edition = "2021"
 
 [dependencies.shared-kernel]
 path = "../shared-kernel"
+
+[dependencies.thiserror]
+version = "2"
