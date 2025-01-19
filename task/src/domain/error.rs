@@ -23,4 +23,7 @@ pub enum TaskDomainError {
 
     #[error("task {task:?} already in net {net:?}")]
     TaskAlreadyInNet { task: Id<Task>, net: Id<Net> },
+
+    #[error("status {status:?} is default status in net {net:?}")]
+    StatusNotRemovable { net: Id<Net>, status: Id<Status> },
 }
