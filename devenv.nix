@@ -5,7 +5,10 @@
   # env.GREET = "devenv";
 
   # https://devenv.sh/packages/
-  packages = with pkgs; [ taplo ];
+  packages = with pkgs; [
+    taplo
+    tokei
+  ];
 
   # https://devenv.sh/languages/
   languages.rust.enable = true;

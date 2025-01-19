@@ -14,6 +14,9 @@ pub enum TaskDomainError {
     #[error("task {task:?} not found in net {net:?}")]
     TaskNotFoundInNet { net: Id<Net>, task: Id<Task> },
 
+    #[error("relation not found in net {net:?}")]
+    RelationNotFoundInNet { net: Id<Net> },
+
     #[error("relation boundary on task {task:?} not satisfied:\n\tRequirements: {requirements:?}\n\tSubtasks: {subtasks:?}")]
     RelationBoundaryNotSatisfied {
         task: Id<Task>,
