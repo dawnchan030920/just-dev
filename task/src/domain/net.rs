@@ -11,7 +11,7 @@ use super::{error::TaskDomainError, task::Task};
 
 #[derive(Debug)]
 pub struct Net {
-    relation_graph: DiGraphMap<Id<Task>, RelationType>,
+    relations: DiGraphMap<Id<Task>, RelationType>,
     schema: Schema,
     tasks: HashMap<Id<Task>, Id<Status>>,
 }
@@ -85,7 +85,7 @@ fn propagate<F>(net: &mut Entity<Net>, sorted_tasks_transform: F) -> TaskDomainR
 where
     F: Fn(Vec<Id<Task>>) -> Vec<Id<Task>>,
 {
-    let tasks: Vec<_> = toposort(&net.data.relation_graph, None)
+    let tasks: Vec<_> = toposort(&net.data.relations, None)
         .map_err(|_| TaskDomainError::CycleNotAllowedInNet(net.id))?;
 
     let tasks = sorted_tasks_transform(tasks);
@@ -118,7 +118,7 @@ fn is_controlled_task_accepted(
 ) -> TaskDomainResult<Option<bool>> {
     let incoming_edges = net
         .data
-        .relation_graph
+        .relations
         .edges_directed(*task, Incoming)
         .into_iter();
 
@@ -205,7 +205,7 @@ impl NetAggregateRoot for Entity<Net> {
         }
 
         self.data.tasks.insert(task_id, self.data.schema.default);
-        self.data.relation_graph.add_node(task_id);
+        self.data.relations.add_node(task_id);
 
         Ok(())
     }
@@ -242,11 +242,11 @@ impl NetAggregateRoot for Entity<Net> {
         to: Id<Task>,
         relation_type: RelationType,
     ) -> TaskDomainResult<()> {
-        if has_path_connecting(&self.data.relation_graph, to, from, None) {
+        if has_path_connecting(&self.data.relations, to, from, None) {
             return Err(TaskDomainError::CycleNotAllowedInNet(self.id));
         }
 
-        self.data.relation_graph.add_edge(from, to, relation_type);
+        self.data.relations.add_edge(from, to, relation_type);
 
         propagate_at(self, &to)?;
 
@@ -255,7 +255,7 @@ impl NetAggregateRoot for Entity<Net> {
 
     fn remove_task(&mut self, task_id: Id<Task>) -> TaskDomainResult<()> {
         self.data.tasks.remove(&task_id);
-        self.data.relation_graph.remove_node(task_id);
+        self.data.relations.remove_node(task_id);
 
         propagate_all(self)?;
 
@@ -263,7 +263,7 @@ impl NetAggregateRoot for Entity<Net> {
     }
 
     fn remove_relation(&mut self, from: Id<Task>, to: Id<Task>) -> TaskDomainResult<()> {
-        self.data.relation_graph.remove_edge(from, to);
+        self.data.relations.remove_edge(from, to);
 
         propagate_at(self, &to)?;
 
