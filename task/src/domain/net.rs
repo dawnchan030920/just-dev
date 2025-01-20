@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
-use bimap::BiHashMap;
-use daggy::{
-    petgraph::{algo::toposort, csr::DefaultIx, data::DataMap, graph::DiGraph},
-    Dag, NodeIndex, Walker,
+use petgraph::{
+    algo::{has_path_connecting, toposort},
+    prelude::DiGraphMap,
+    Direction::Incoming,
 };
 use shared_kernel::{Entity, Id};
 
@@ -11,15 +11,9 @@ use super::{error::TaskDomainError, task::Task};
 
 #[derive(Debug)]
 pub struct Net {
-    relation_graph: RelationGraph,
+    relation_graph: DiGraphMap<Id<Task>, RelationType>,
     schema: Schema,
     tasks: HashMap<Id<Task>, Id<Status>>,
-}
-
-#[derive(Debug)]
-struct RelationGraph {
-    relations: Dag<Id<Task>, RelationType>,
-    task_index: BiHashMap<Id<Task>, NodeIndex<DefaultIx>>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -41,13 +35,6 @@ pub struct Status {
 }
 
 type TaskDomainResult<T> = Result<T, TaskDomainError>;
-
-impl RelationGraph {
-    fn add_task(&mut self, task: Id<Task>) {
-        let id = self.relations.add_node(task);
-        self.task_index.insert(task, id);
-    }
-}
 
 pub trait NetAggregateRoot {
     fn new_status(&mut self, status_name: String);
@@ -74,30 +61,41 @@ pub trait NetAggregateRoot {
     ) -> TaskDomainResult<()>;
 }
 
-fn propagate_from(net: &mut Entity<Net>, task: &Id<Task>) -> TaskDomainResult<()> {
-    let tasks_after = toposort(&net.data.relation_graph.relations, None)
-        .unwrap()
-        .into_iter()
-        .map(|ix| {
-            net.data
-                .relation_graph
-                .task_index
-                .get_by_right(&ix)
-                .unwrap()
-        })
-        .skip_while(|t| **t != *task)
-        .skip(1);
+fn propagate_all(net: &mut Entity<Net>) -> TaskDomainResult<()> {
+    propagate(net, |tasks| tasks)
+}
 
-    for task in tasks_after {
-        if let Some(accepted) = is_controlled_task_accepted(net, task)? {
-            let stored_task_status =
-                net.data
-                    .tasks
-                    .get_mut(task)
-                    .ok_or(TaskDomainError::TaskNotFoundInNet {
-                        net: net.id,
-                        task: *task,
-                    })?;
+fn propagate_from(net: &mut Entity<Net>, task: &Id<Task>) -> TaskDomainResult<()> {
+    propagate(net, |tasks| {
+        tasks
+            .into_iter()
+            .skip_while(|t| *t != *task)
+            .skip(1)
+            .collect()
+    })
+}
+
+fn propagate_at(net: &mut Entity<Net>, task: &Id<Task>) -> TaskDomainResult<()> {
+    propagate(net, |tasks| {
+        tasks.into_iter().skip_while(|t| *t != *task).collect()
+    })
+}
+
+fn propagate<F>(net: &mut Entity<Net>, sorted_tasks_transform: F) -> TaskDomainResult<()>
+where
+    F: Fn(Vec<Id<Task>>) -> Vec<Id<Task>>,
+{
+    let tasks: Vec<_> = toposort(&net.data.relation_graph, None).unwrap();
+
+    let tasks = sorted_tasks_transform(tasks);
+
+    for task in tasks {
+        if let Some(accepted) = is_controlled_task_accepted(net, &task)? {
+            let stored_task_status = net
+                .data
+                .tasks
+                .get_mut(&task)
+                .ok_or(TaskDomainError::TaskNotFoundInNet { net: net.id, task })?;
 
             let stored_task_accepted = *stored_task_status == net.data.schema.accepted;
 
@@ -117,36 +115,26 @@ fn is_controlled_task_accepted(
     net: &Entity<Net>,
     task: &Id<Task>,
 ) -> TaskDomainResult<Option<bool>> {
-    let parents = net
+    let incoming_edges = net
         .data
         .relation_graph
-        .relations
-        .parents(
-            *net.data
-                .relation_graph
-                .task_index
-                .get_by_left(&task)
-                .ok_or(TaskDomainError::TaskNotFoundInNet {
-                    net: net.id,
-                    task: *task,
-                })?,
-        )
-        .iter(&net.data.relation_graph.relations);
+        .edges_directed(*task, Incoming)
+        .into_iter();
 
     let mut have_subtasks = false;
-    for (edge, node) in parents {
-        let relation_type = net.data.relation_graph.relations.edge_weight(edge).unwrap();
-        let task_id = net.data.relation_graph.relations.node_weight(node).unwrap();
+    for incoming_edge in incoming_edges {
+        let relation_type = incoming_edge.2;
+        let task_id = incoming_edge.0;
 
-        if !(*net
+        if *net
             .data
             .tasks
-            .get(task_id)
+            .get(&task_id)
             .ok_or(TaskDomainError::TaskNotFoundInNet {
                 net: net.id,
-                task: *task_id,
+                task: task_id,
             })?
-            == net.data.schema.accepted)
+            != net.data.schema.accepted
         {
             return Ok(Some(false));
         }
@@ -216,7 +204,8 @@ impl NetAggregateRoot for Entity<Net> {
         }
 
         self.data.tasks.insert(task_id, self.data.schema.default);
-        self.data.relation_graph.add_task(task_id);
+        self.data.relation_graph.add_node(task_id);
+
         Ok(())
     }
 
@@ -225,7 +214,25 @@ impl NetAggregateRoot for Entity<Net> {
         task_id: Id<Task>,
         status_id: Id<Status>,
     ) -> TaskDomainResult<()> {
-        todo!()
+        if is_controlled_task_accepted(&self, &task_id)?.is_none() {
+            let task_status =
+                self.data
+                    .tasks
+                    .get_mut(&task_id)
+                    .ok_or(TaskDomainError::TaskNotFoundInNet {
+                        net: self.id,
+                        task: task_id,
+                    })?;
+            *task_status = status_id;
+            propagate_from(self, &task_id)?;
+
+            Ok(())
+        } else {
+            return Err(TaskDomainError::RelationConstraintNotSatisfied {
+                net: self.id,
+                task: task_id,
+            });
+        }
     }
 
     fn new_relation(
@@ -234,7 +241,15 @@ impl NetAggregateRoot for Entity<Net> {
         to: Id<Task>,
         relation_type: RelationType,
     ) -> TaskDomainResult<()> {
-        todo!()
+        if has_path_connecting(&self.data.relation_graph, to, from, None) {
+            return Err(TaskDomainError::CycleNotAllowedInNet(self.id));
+        }
+
+        self.data.relation_graph.add_edge(from, to, relation_type);
+
+        propagate_from(self, &from)?;
+
+        Ok(())
     }
 
     fn remove_task(&mut self, task_id: Id<Task>) -> TaskDomainResult<()> {
@@ -242,7 +257,11 @@ impl NetAggregateRoot for Entity<Net> {
     }
 
     fn remove_relation(&mut self, from: Id<Task>, to: Id<Task>) -> TaskDomainResult<()> {
-        todo!()
+        self.data.relation_graph.remove_edge(from, to);
+
+        propagate_at(self, &to)?;
+
+        Ok(())
     }
 
     fn new_status(&mut self, status_name: String) {

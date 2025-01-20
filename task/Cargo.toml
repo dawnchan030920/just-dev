@@ -4,8 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bimap = "0.6.3"
-daggy = "0.8.0"
+petgraph = "0.7.1"
 
 [dependencies.shared-kernel]
 path = "../shared-kernel"

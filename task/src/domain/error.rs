@@ -14,19 +14,22 @@ pub enum TaskDomainError {
     #[error("task {task:?} not found in net {net:?}")]
     TaskNotFoundInNet { net: Id<Net>, task: Id<Task> },
 
-    #[error("relation not found in net {net:?}")]
-    RelationNotFoundInNet { net: Id<Net> },
-
-    #[error("relation boundary on task {task:?} not satisfied:\n\tRequirements: {requirements:?}\n\tSubtasks: {subtasks:?}")]
-    RelationBoundaryNotSatisfied {
-        task: Id<Task>,
-        requirements: Vec<Id<Task>>,
-        subtasks: Vec<Id<Task>>,
+    #[error("relation from {from:?} to {to:?} not found in net {net:?}")]
+    RelationNotFoundInNet {
+        net: Id<Net>,
+        from: Id<Task>,
+        to: Id<Task>,
     },
+
+    #[error("relation constraints not satisfied for task {task:?} in net {net:?}")]
+    RelationConstraintNotSatisfied { net: Id<Net>, task: Id<Task> },
 
     #[error("task {task:?} already in net {net:?}")]
     TaskAlreadyInNet { task: Id<Task>, net: Id<Net> },
 
     #[error("status {status:?} is default status in net {net:?}")]
     StatusNotRemovable { net: Id<Net>, status: Id<Status> },
+
+    #[error("cycle found in net {0:?}")]
+    CycleNotAllowedInNet(Id<Net>),
 }
