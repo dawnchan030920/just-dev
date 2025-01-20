@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use bimap::BiHashMap;
 use daggy::{
-    petgraph::{csr::DefaultIx, data::DataMap},
+    petgraph::{algo::toposort, csr::DefaultIx, data::DataMap, graph::DiGraph},
     Dag, NodeIndex, Walker,
 };
 use shared_kernel::{Entity, Id};
@@ -74,13 +74,48 @@ pub trait NetAggregateRoot {
     ) -> TaskDomainResult<()>;
 }
 
-fn propagate(net: &mut Net, task: &Id<Task>) -> TaskDomainResult<()> {
-    todo!()
+fn propagate_from(net: &mut Entity<Net>, task: &Id<Task>) -> TaskDomainResult<()> {
+    let tasks_after = toposort(&net.data.relation_graph.relations, None)
+        .unwrap()
+        .into_iter()
+        .map(|ix| {
+            net.data
+                .relation_graph
+                .task_index
+                .get_by_right(&ix)
+                .unwrap()
+        })
+        .skip_while(|t| **t != *task)
+        .skip(1);
+
+    for task in tasks_after {
+        if let Some(accepted) = is_controlled_task_accepted(net, task)? {
+            let stored_task_status =
+                net.data
+                    .tasks
+                    .get_mut(task)
+                    .ok_or(TaskDomainError::TaskNotFoundInNet {
+                        net: net.id,
+                        task: *task,
+                    })?;
+
+            let stored_task_accepted = *stored_task_status == net.data.schema.accepted;
+
+            if accepted != stored_task_accepted {
+                match accepted {
+                    true => *stored_task_status = net.data.schema.accepted,
+                    false => *stored_task_status = net.data.schema.default,
+                }
+            }
+        }
+    }
+
+    Ok(())
 }
 
 fn is_controlled_task_accepted(
     net: &Entity<Net>,
-    task: Id<Task>,
+    task: &Id<Task>,
 ) -> TaskDomainResult<Option<bool>> {
     let parents = net
         .data
@@ -91,7 +126,10 @@ fn is_controlled_task_accepted(
                 .relation_graph
                 .task_index
                 .get_by_left(&task)
-                .ok_or(TaskDomainError::TaskNotFoundInNet { net: net.id, task })?,
+                .ok_or(TaskDomainError::TaskNotFoundInNet {
+                    net: net.id,
+                    task: *task,
+                })?,
         )
         .iter(&net.data.relation_graph.relations);
 
@@ -100,7 +138,7 @@ fn is_controlled_task_accepted(
         let relation_type = net.data.relation_graph.relations.edge_weight(edge).unwrap();
         let task_id = net.data.relation_graph.relations.node_weight(node).unwrap();
 
-        if !Ok(*net
+        if !(*net
             .data
             .tasks
             .get(task_id)
@@ -108,7 +146,7 @@ fn is_controlled_task_accepted(
                 net: net.id,
                 task: *task_id,
             })?
-            == net.data.schema.accepted)?
+            == net.data.schema.accepted)
         {
             return Ok(Some(false));
         }
@@ -121,18 +159,6 @@ fn is_controlled_task_accepted(
         return Ok(Some(true));
     }
     Ok(None)
-}
-
-fn is_accepted(net: &Entity<Net>, task: &Id<Task>) -> TaskDomainResult<bool> {
-    Ok(*net
-        .data
-        .tasks
-        .get(task)
-        .ok_or(TaskDomainError::TaskNotFoundInNet {
-            net: net.id,
-            task: *task,
-        })?
-        == net.data.schema.accepted)
 }
 
 impl NetAggregateRoot for Entity<Net> {
