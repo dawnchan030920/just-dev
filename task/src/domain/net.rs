@@ -85,7 +85,8 @@ fn propagate<F>(net: &mut Entity<Net>, sorted_tasks_transform: F) -> TaskDomainR
 where
     F: Fn(Vec<Id<Task>>) -> Vec<Id<Task>>,
 {
-    let tasks: Vec<_> = toposort(&net.data.relation_graph, None).unwrap();
+    let tasks: Vec<_> = toposort(&net.data.relation_graph, None)
+        .map_err(|_| TaskDomainError::CycleNotAllowedInNet(net.id))?;
 
     let tasks = sorted_tasks_transform(tasks);
 
@@ -247,13 +248,18 @@ impl NetAggregateRoot for Entity<Net> {
 
         self.data.relation_graph.add_edge(from, to, relation_type);
 
-        propagate_from(self, &from)?;
+        propagate_at(self, &to)?;
 
         Ok(())
     }
 
     fn remove_task(&mut self, task_id: Id<Task>) -> TaskDomainResult<()> {
-        todo!()
+        self.data.tasks.remove(&task_id);
+        self.data.relation_graph.remove_node(task_id);
+
+        propagate_all(self)?;
+
+        Ok(())
     }
 
     fn remove_relation(&mut self, from: Id<Task>, to: Id<Task>) -> TaskDomainResult<()> {
