@@ -9,6 +9,7 @@ use shared_kernel::{Entity, Id};
 
 use super::{error::TaskDomainError, task::Task};
 
+/// Represents a network of tasks and their relations.
 #[derive(Debug)]
 pub struct Net {
     relations: DiGraphMap<Id<Task>, RelationType>,
@@ -16,12 +17,16 @@ pub struct Net {
     tasks: HashMap<Id<Task>, Id<Status>>,
 }
 
+/// Represents the type of relation between tasks.
 #[derive(Debug, PartialEq, Eq)]
 pub enum RelationType {
+    /// A composition relation.
     Compose,
+    /// A requirement relation.
     Require,
 }
 
+/// Represents the status schema of a network, including statuses and default/accepted statuses.
 #[derive(Debug)]
 pub struct Schema {
     status: Vec<Entity<Status>>,
@@ -29,6 +34,7 @@ pub struct Schema {
     accepted: Id<Status>,
 }
 
+/// Represents the status of a task.
 #[derive(Debug, PartialEq, Eq)]
 pub struct Status {
     name: String,
@@ -36,24 +42,34 @@ pub struct Status {
 
 type TaskDomainResult<T> = Result<T, TaskDomainError>;
 
+/// Trait for aggregate root operations on a `Net`.
 pub trait NetAggregateRoot {
+    /// Adds a new status to the network.
     fn new_status(&mut self, status_name: String);
+    /// Removes a status from the network.
     fn remove_status(&mut self, status_id: Id<Status>) -> TaskDomainResult<()>;
+    /// Changes the name of a status in the network.
     fn change_status_name(
         &mut self,
         status_id: Id<Status>,
         new_name: String,
     ) -> TaskDomainResult<()>;
+    /// Changes the default status of the network.
     fn change_default(&mut self, new_default: Id<Status>) -> TaskDomainResult<()>;
+    /// Adds a new task to the network.
     fn add_task(&mut self, task_id: Id<Task>) -> TaskDomainResult<()>;
+    /// Removes a task from the network.
     fn remove_task(&mut self, task_id: Id<Task>) -> TaskDomainResult<()>;
+    /// Adds a new relation between tasks in the network.
     fn new_relation(
         &mut self,
         from: Id<Task>,
         to: Id<Task>,
         relation_type: RelationType,
     ) -> TaskDomainResult<()>;
+    /// Removes a relation between tasks in the network.
     fn remove_relation(&mut self, from: Id<Task>, to: Id<Task>) -> TaskDomainResult<()>;
+    /// Changes the status of a task in the network.
     fn change_task_status(
         &mut self,
         task_id: Id<Task>,
@@ -61,10 +77,12 @@ pub trait NetAggregateRoot {
     ) -> TaskDomainResult<()>;
 }
 
+/// Propagates changes through all tasks in the network.
 fn propagate_all(net: &mut Entity<Net>) -> TaskDomainResult<()> {
     propagate(net, |tasks| tasks)
 }
 
+/// Propagates changes from a specific task in the network.
 fn propagate_from(net: &mut Entity<Net>, task: &Id<Task>) -> TaskDomainResult<()> {
     propagate(net, |tasks| {
         tasks
@@ -75,12 +93,14 @@ fn propagate_from(net: &mut Entity<Net>, task: &Id<Task>) -> TaskDomainResult<()
     })
 }
 
+/// Propagates changes at a specific task in the network.
 fn propagate_at(net: &mut Entity<Net>, task: &Id<Task>) -> TaskDomainResult<()> {
     propagate(net, |tasks| {
         tasks.into_iter().skip_while(|t| *t != *task).collect()
     })
 }
 
+/// Propagates changes through tasks in the network using a transformation function applied to toposorted task list.
 fn propagate<F>(net: &mut Entity<Net>, sorted_tasks_transform: F) -> TaskDomainResult<()>
 where
     F: Fn(Vec<Id<Task>>) -> Vec<Id<Task>>,
@@ -112,6 +132,7 @@ where
     Ok(())
 }
 
+/// Checks if a controlled task is accepted in the network.
 fn is_controlled_task_accepted(
     net: &Entity<Net>,
     task: &Id<Task>,
