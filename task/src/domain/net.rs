@@ -373,3 +373,147 @@ impl NetAggregateRoot for Entity<Net> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::thread::AccessError;
+
+    use super::*;
+
+    #[test]
+    fn test_new() {
+        let default_name = "Test Default".to_string();
+        let accepted_name = "Test Accepted".to_string();
+        let net = Entity::new(default_name.clone(), accepted_name.clone());
+
+        assert_eq!(
+            net.data
+                .schema
+                .status
+                .iter()
+                .find(|status| status.id == net.data.schema.default)
+                .unwrap()
+                .data
+                .name,
+            default_name,
+        );
+
+        assert_eq!(
+            net.data
+                .schema
+                .status
+                .iter()
+                .find(|status| status.id == net.data.schema.accepted)
+                .unwrap()
+                .data
+                .name,
+            accepted_name
+        )
+    }
+
+    #[test]
+    fn test_new_status() {
+        let default_name = "Test Default".to_string();
+        let accepted_name = "Test Accepted".to_string();
+        let mut net = Entity::new(default_name.clone(), accepted_name.clone());
+        let new_status_name1 = "Test Status 1".to_string();
+        let new_status_name2 = "Test Status 2".to_string();
+        net.new_status(new_status_name1.clone());
+        net.new_status(new_status_name2.clone());
+
+        assert!(net
+            .data
+            .schema
+            .status
+            .iter()
+            .any(|status| status.data.name == new_status_name1));
+
+        assert!(net
+            .data
+            .schema
+            .status
+            .iter()
+            .any(|status| status.data.name == new_status_name2));
+    }
+
+    #[test]
+    fn test_remove_normal_status() {
+        let default = "Default";
+        let accepted = "Accepted";
+
+        let mut net = Entity::new(default.to_string(), accepted.to_string());
+        net.new_status("Test".to_string());
+
+        let id = net
+            .data
+            .schema
+            .status
+            .iter()
+            .find(|status| status.data.name != default && status.data.name != accepted)
+            .unwrap()
+            .id;
+
+        net.remove_status(id).unwrap();
+
+        assert!(
+            net.data
+                .schema
+                .status
+                .iter()
+                .any(|status| status.data.name != default && status.data.name != accepted)
+                == false
+        );
+    }
+
+    #[test]
+    fn test_remove_default_status_error() {
+        let default = "Default";
+        let accepted = "Accepted";
+
+        let mut net = Entity::new(default.to_string(), accepted.to_string());
+
+        let default_id = net
+            .data
+            .schema
+            .status
+            .iter()
+            .find(|status| status.data.name == default)
+            .unwrap()
+            .id;
+
+        assert!(net.remove_status(default_id).is_err());
+
+        assert!(net
+            .data
+            .schema
+            .status
+            .iter()
+            .any(|status| status.id == default_id));
+    }
+
+    #[test]
+    fn test_remove_accepted_status_error() {
+        let default = "Default";
+        let accepted = "Accepted";
+
+        let mut net = Entity::new(default.to_string(), accepted.to_string());
+
+        let accepted_id = net
+            .data
+            .schema
+            .status
+            .iter()
+            .find(|status| status.data.name == accepted)
+            .unwrap()
+            .id;
+
+        assert!(net.remove_status(accepted_id).is_err());
+
+        assert!(net
+            .data
+            .schema
+            .status
+            .iter()
+            .any(|status| status.id == accepted_id));
+    }
+}
