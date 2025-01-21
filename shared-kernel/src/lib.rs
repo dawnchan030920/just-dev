@@ -2,6 +2,7 @@ use std::marker::PhantomData;
 
 use uuid::Uuid;
 
+/// A unique identifier for an entity of type `T`.
 #[derive(Debug)]
 pub struct Id<T> {
     pub id: Uuid,
@@ -46,6 +47,7 @@ impl<T> Clone for Id<T> {
 }
 
 impl<T> Id<T> {
+    /// Creates a new unique identifier.
     pub fn new() -> Self {
         Self {
             id: Uuid::new_v4(),
@@ -54,6 +56,7 @@ impl<T> Id<T> {
     }
 }
 
+/// An entity with a unique identifier and associated data.
 #[derive(Debug)]
 pub struct Entity<T> {
     pub id: Id<T>,

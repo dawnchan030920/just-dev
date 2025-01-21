@@ -2,15 +2,22 @@ use shared_kernel::{Entity, Id};
 
 use super::list::List;
 
+/// Represents a task with a name and associated list.
 #[derive(Debug)]
 pub struct Task {
     pub name: String,
     pub list: Id<List>,
 }
 
+/// Trait for aggregate root operations on a `Task`.
 pub trait TaskAggregateRoot {
+    /// Renames the task with a new name.
     fn rename(&mut self, name: String);
+
+    /// Creates a new task with the given name and list.
     fn new(name: String, list: Id<List>) -> Self;
+
+    /// Categorizes the task to a new list.
     fn categorize_to(&mut self, list: Id<List>);
 }
 
