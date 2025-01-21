@@ -76,6 +76,7 @@ impl Schema {
 
 /// Trait for aggregate root operations on a `Net`.
 pub trait NetAggregateRoot {
+    /// Create an empty net by providing the default and accepted status name.
     fn new(default: String, accepted: String) -> Self;
     /// Adds a new status to the network.
     fn new_status(&mut self, status_name: String);
