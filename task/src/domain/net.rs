@@ -42,8 +42,41 @@ pub struct Status {
 
 type TaskDomainResult<T> = Result<T, TaskDomainError>;
 
+impl Schema {
+    fn new(default: String, accepted: String, normal: Vec<String>) -> Schema {
+        let default_id = Id::new();
+        let default = Entity {
+            id: default_id,
+            data: Status { name: default },
+        };
+
+        let accepted_id = Id::new();
+        let accepted = Entity {
+            id: accepted_id,
+            data: Status { name: accepted },
+        };
+
+        let mut status: Vec<_> = normal
+            .into_iter()
+            .map(|normal| Entity {
+                id: Id::new(),
+                data: Status { name: normal },
+            })
+            .collect();
+        status.push(default);
+        status.push(accepted);
+
+        Schema {
+            status,
+            default: default_id,
+            accepted: accepted_id,
+        }
+    }
+}
+
 /// Trait for aggregate root operations on a `Net`.
 pub trait NetAggregateRoot {
+    fn new(default: String, accepted: String) -> Self;
     /// Adds a new status to the network.
     fn new_status(&mut self, status_name: String);
     /// Removes a status from the network.
@@ -332,5 +365,16 @@ impl NetAggregateRoot for Entity<Net> {
             .retain(|status| status.id != removed_status);
 
         Ok(())
+    }
+
+    fn new(default: String, accepted: String) -> Self {
+        Self {
+            id: Id::new(),
+            data: Net {
+                relations: DiGraphMap::new(),
+                schema: Schema::new(default, accepted, vec![]),
+                tasks: HashMap::new(),
+            },
+        }
     }
 }
