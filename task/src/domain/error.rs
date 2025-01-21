@@ -41,3 +41,114 @@ pub enum TaskDomainError {
     #[error("cycle found in net {0:?}")]
     CycleNotAllowedInNet(Id<Net>),
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use shared_kernel::Id;
+
+    #[test]
+    fn test_status_not_found_in_net() {
+        let net_id = Id::new();
+        let status_id = Id::new();
+        let error = TaskDomainError::StatusNotFoundInNet {
+            net: net_id,
+            status: status_id,
+        };
+        assert_eq!(
+            format!("{}", error),
+            format!("status {:?} not found in net {:?}", status_id, net_id)
+        );
+    }
+
+    #[test]
+    fn test_task_not_found_in_net() {
+        let net_id = Id::new();
+        let task_id = Id::new();
+        let error = TaskDomainError::TaskNotFoundInNet {
+            net: net_id,
+            task: task_id,
+        };
+        assert_eq!(
+            format!("{}", error),
+            format!("task {:?} not found in net {:?}", task_id, net_id)
+        );
+    }
+
+    #[test]
+    fn test_relation_not_found_in_net() {
+        let net_id = Id::new();
+        let from_id = Id::new();
+        let to_id = Id::new();
+        let error = TaskDomainError::RelationNotFoundInNet {
+            net: net_id,
+            from: from_id,
+            to: to_id,
+        };
+        assert_eq!(
+            format!("{}", error),
+            format!(
+                "relation from {:?} to {:?} not found in net {:?}",
+                from_id, to_id, net_id
+            )
+        );
+    }
+
+    #[test]
+    fn test_relation_constraint_not_satisfied() {
+        let net_id = Id::new();
+        let task_id = Id::new();
+        let error = TaskDomainError::RelationConstraintNotSatisfied {
+            net: net_id,
+            task: task_id,
+        };
+        assert_eq!(
+            format!("{}", error),
+            format!(
+                "relation constraints not satisfied for task {:?} in net {:?}",
+                task_id, net_id
+            )
+        );
+    }
+
+    #[test]
+    fn test_task_already_in_net() {
+        let net_id = Id::new();
+        let task_id = Id::new();
+        let error = TaskDomainError::TaskAlreadyInNet {
+            task: task_id,
+            net: net_id,
+        };
+        assert_eq!(
+            format!("{}", error),
+            format!("task {:?} already in net {:?}", task_id, net_id)
+        );
+    }
+
+    #[test]
+    fn test_status_not_removable() {
+        let net_id = Id::new();
+        let status_id = Id::new();
+        let error = TaskDomainError::StatusNotRemovable {
+            net: net_id,
+            status: status_id,
+        };
+        assert_eq!(
+            format!("{}", error),
+            format!(
+                "status {:?} is default status in net {:?}",
+                status_id, net_id
+            )
+        );
+    }
+
+    #[test]
+    fn test_cycle_not_allowed_in_net() {
+        let net_id = Id::new();
+        let error = TaskDomainError::CycleNotAllowedInNet(net_id);
+        assert_eq!(
+            format!("{}", error),
+            format!("cycle found in net {:?}", net_id)
+        );
+    }
+}

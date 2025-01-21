@@ -334,3 +334,207 @@ impl NetAggregateRoot for Entity<Net> {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use shared_kernel::Id;
+
+    #[test]
+    fn test_new_status() {
+        let mut net = Entity::new(Net {
+            relations: DiGraphMap::new(),
+            schema: Schema {
+                status: vec![],
+                default: Id::new(),
+                accepted: Id::new(),
+            },
+            tasks: HashMap::new(),
+        });
+
+        net.new_status("New Status".to_string());
+        assert_eq!(net.data.schema.status.len(), 1);
+        assert_eq!(net.data.schema.status[0].data.name, "New Status");
+    }
+
+    #[test]
+    fn test_remove_status() {
+        let mut net = Entity::new(Net {
+            relations: DiGraphMap::new(),
+            schema: Schema {
+                status: vec![],
+                default: Id::new(),
+                accepted: Id::new(),
+            },
+            tasks: HashMap::new(),
+        });
+
+        let status_id = Id::new();
+        net.data.schema.status.push(Entity {
+            id: status_id,
+            data: Status {
+                name: "Status to Remove".to_string(),
+            },
+        });
+
+        net.remove_status(status_id).unwrap();
+        assert!(net.data.schema.status.is_empty());
+    }
+
+    #[test]
+    fn test_change_status_name() {
+        let mut net = Entity::new(Net {
+            relations: DiGraphMap::new(),
+            schema: Schema {
+                status: vec![],
+                default: Id::new(),
+                accepted: Id::new(),
+            },
+            tasks: HashMap::new(),
+        });
+
+        let status_id = Id::new();
+        net.data.schema.status.push(Entity {
+            id: status_id,
+            data: Status {
+                name: "Old Status Name".to_string(),
+            },
+        });
+
+        net.change_status_name(status_id, "New Status Name".to_string())
+            .unwrap();
+        assert_eq!(net.data.schema.status[0].data.name, "New Status Name");
+    }
+
+    #[test]
+    fn test_change_default() {
+        let mut net = Entity::new(Net {
+            relations: DiGraphMap::new(),
+            schema: Schema {
+                status: vec![],
+                default: Id::new(),
+                accepted: Id::new(),
+            },
+            tasks: HashMap::new(),
+        });
+
+        let status_id = Id::new();
+        net.data.schema.status.push(Entity {
+            id: status_id,
+            data: Status {
+                name: "Status".to_string(),
+            },
+        });
+
+        net.change_default(status_id).unwrap();
+        assert_eq!(net.data.schema.default, status_id);
+    }
+
+    #[test]
+    fn test_add_task() {
+        let mut net = Entity::new(Net {
+            relations: DiGraphMap::new(),
+            schema: Schema {
+                status: vec![],
+                default: Id::new(),
+                accepted: Id::new(),
+            },
+            tasks: HashMap::new(),
+        });
+
+        let task_id = Id::new();
+        net.add_task(task_id).unwrap();
+        assert_eq!(net.data.tasks.len(), 1);
+        assert_eq!(net.data.tasks[&task_id], net.data.schema.default);
+    }
+
+    #[test]
+    fn test_remove_task() {
+        let mut net = Entity::new(Net {
+            relations: DiGraphMap::new(),
+            schema: Schema {
+                status: vec![],
+                default: Id::new(),
+                accepted: Id::new(),
+            },
+            tasks: HashMap::new(),
+        });
+
+        let task_id = Id::new();
+        net.add_task(task_id).unwrap();
+        net.remove_task(task_id).unwrap();
+        assert!(net.data.tasks.is_empty());
+    }
+
+    #[test]
+    fn test_new_relation() {
+        let mut net = Entity::new(Net {
+            relations: DiGraphMap::new(),
+            schema: Schema {
+                status: vec![],
+                default: Id::new(),
+                accepted: Id::new(),
+            },
+            tasks: HashMap::new(),
+        });
+
+        let task_id_1 = Id::new();
+        let task_id_2 = Id::new();
+        net.add_task(task_id_1).unwrap();
+        net.add_task(task_id_2).unwrap();
+
+        net.new_relation(task_id_1, task_id_2, RelationType::Compose)
+            .unwrap();
+        assert!(net.data.relations.contains_edge(task_id_1, task_id_2));
+    }
+
+    #[test]
+    fn test_remove_relation() {
+        let mut net = Entity::new(Net {
+            relations: DiGraphMap::new(),
+            schema: Schema {
+                status: vec![],
+                default: Id::new(),
+                accepted: Id::new(),
+            },
+            tasks: HashMap::new(),
+        });
+
+        let task_id_1 = Id::new();
+        let task_id_2 = Id::new();
+        net.add_task(task_id_1).unwrap();
+        net.add_task(task_id_2).unwrap();
+
+        net.new_relation(task_id_1, task_id_2, RelationType::Compose)
+            .unwrap();
+        net.remove_relation(task_id_1, task_id_2).unwrap();
+        assert!(!net.data.relations.contains_edge(task_id_1, task_id_2));
+    }
+
+    #[test]
+    fn test_change_task_status() {
+        let mut net = Entity::new(Net {
+            relations: DiGraphMap::new(),
+            schema: Schema {
+                status: vec![],
+                default: Id::new(),
+                accepted: Id::new(),
+            },
+            tasks: HashMap::new(),
+        });
+
+        let task_id = Id::new();
+        net.add_task(task_id).unwrap();
+
+        let status_id = Id::new();
+        net.data.schema.status.push(Entity {
+            id: status_id,
+            data: Status {
+                name: "Status".to_string(),
+            },
+        });
+
+        net.change_task_status(task_id, status_id).unwrap();
+        assert_eq!(net.data.tasks[&task_id], status_id);
+    }
+}

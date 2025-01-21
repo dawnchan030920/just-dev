@@ -37,3 +37,35 @@ impl TaskAggregateRoot for Entity<Task> {
         self.data.list = list;
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use shared_kernel::Id;
+    use super::super::list::List;
+
+    #[test]
+    fn test_rename() {
+        let list_id = Id::new();
+        let mut task = Entity::new("Test Task".to_string(), list_id);
+        task.rename("Renamed Task".to_string());
+        assert_eq!(task.data.name, "Renamed Task");
+    }
+
+    #[test]
+    fn test_new() {
+        let list_id = Id::new();
+        let task = Entity::new("New Task".to_string(), list_id);
+        assert_eq!(task.data.name, "New Task");
+        assert_eq!(task.data.list, list_id);
+    }
+
+    #[test]
+    fn test_categorize_to() {
+        let list_id = Id::new();
+        let new_list_id = Id::new();
+        let mut task = Entity::new("Test Task".to_string(), list_id);
+        task.categorize_to(new_list_id);
+        assert_eq!(task.data.list, new_list_id);
+    }
+}

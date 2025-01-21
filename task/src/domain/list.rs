@@ -27,3 +27,21 @@ impl ListAggregateRoot for Entity<List> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_rename() {
+        let mut list = Entity::new("Test List".to_string());
+        list.rename("Renamed List".to_string());
+        assert_eq!(list.data.title, "Renamed List");
+    }
+
+    #[test]
+    fn test_new() {
+        let list = Entity::new("New List".to_string());
+        assert_eq!(list.data.title, "New List");
+    }
+}
