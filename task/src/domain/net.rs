@@ -26,7 +26,7 @@ pub enum RelationType {
     Require,
 }
 
-/// Represents the schema of a network, including statuses and default/accepted statuses.
+/// Represents the status schema of a network, including statuses and default/accepted statuses.
 #[derive(Debug)]
 pub struct Schema {
     status: Vec<Entity<Status>>,
@@ -100,7 +100,7 @@ fn propagate_at(net: &mut Entity<Net>, task: &Id<Task>) -> TaskDomainResult<()> 
     })
 }
 
-/// Propagates changes through tasks in the network using a custom task transformation function.
+/// Propagates changes through tasks in the network using a transformation function applied to toposorted task list.
 fn propagate<F>(net: &mut Entity<Net>, sorted_tasks_transform: F) -> TaskDomainResult<()>
 where
     F: Fn(Vec<Id<Task>>) -> Vec<Id<Task>>,

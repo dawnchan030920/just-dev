@@ -2,7 +2,7 @@ use shared_kernel::{Entity, Id};
 
 use super::list::List;
 
-/// Represents a task with a name and associated list.
+/// Represents a task.
 #[derive(Debug)]
 pub struct Task {
     pub name: String,

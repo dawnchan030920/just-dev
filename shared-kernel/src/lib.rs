@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use uuid::Uuid;
 
-/// A unique identifier for an entity of type `T`.
+/// A unique identifier for a data value object of type `T`.
 #[derive(Debug)]
 pub struct Id<T> {
     pub id: Uuid,
@@ -56,7 +56,7 @@ impl<T> Id<T> {
     }
 }
 
-/// An entity with a unique identifier and associated data.
+/// An entity with a unique identifier and associated data value object.
 #[derive(Debug)]
 pub struct Entity<T> {
     pub id: Id<T>,

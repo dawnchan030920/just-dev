@@ -1,6 +1,6 @@
 use shared_kernel::{Entity, Id};
 
-/// Represents a list with a title.
+/// Represents a task list.
 #[derive(Debug)]
 pub struct List {
     title: String,
