@@ -51,6 +51,7 @@ jobs:
           FIX_RUST_2021: true
           FIX_RUST_CLIPPY: true
           FIX_YAML_PRETTIER: true
+          FIX_JSON_PRETTIER: true
       - name: Commit and push linting fixes
         if: >
           github.event_name == 'pull_request' &&
