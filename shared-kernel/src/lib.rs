@@ -40,9 +40,15 @@ impl<T> Copy for Id<T> {}
 impl<T> Clone for Id<T> {
     fn clone(&self) -> Self {
         Self {
-            id: self.id.clone(),
-            phantom: self.phantom.clone(),
+            id: self.id,
+            phantom: self.phantom,
         }
+    }
+}
+
+impl<T> Default for Id<T> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

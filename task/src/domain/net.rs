@@ -170,11 +170,7 @@ fn is_controlled_task_accepted(
     net: &Entity<Net>,
     task: &Id<Task>,
 ) -> TaskDomainResult<Option<bool>> {
-    let incoming_edges = net
-        .data
-        .relations
-        .edges_directed(*task, Incoming)
-        .into_iter();
+    let incoming_edges = net.data.relations.edges_directed(*task, Incoming);
 
     let mut have_subtasks = false;
     for incoming_edge in incoming_edges {
@@ -217,7 +213,6 @@ impl NetAggregateRoot for Entity<Net> {
             .find(|status| status.id == status_id)
             .map(|status| {
                 status.data.name = new_name;
-                ()
             })
             .ok_or(TaskDomainError::StatusNotFoundInNet {
                 net: self.id,
@@ -269,7 +264,7 @@ impl NetAggregateRoot for Entity<Net> {
         task_id: Id<Task>,
         status_id: Id<Status>,
     ) -> TaskDomainResult<()> {
-        if is_controlled_task_accepted(&self, &task_id)?.is_none() {
+        if is_controlled_task_accepted(self, &task_id)?.is_none() {
             let task_status =
                 self.data
                     .tasks
@@ -283,10 +278,10 @@ impl NetAggregateRoot for Entity<Net> {
 
             Ok(())
         } else {
-            return Err(TaskDomainError::RelationConstraintNotSatisfied {
+            Err(TaskDomainError::RelationConstraintNotSatisfied {
                 net: self.id,
                 task: task_id,
-            });
+            })
         }
     }
 
