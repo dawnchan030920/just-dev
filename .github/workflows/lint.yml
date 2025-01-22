@@ -2,22 +2,22 @@ name: Lint
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 permissions: {}
 
 jobs:
   lint:
     runs-on: ubuntu-latest
-    
+
     permissions:
       contents: read
       packages: read
       # To report GitHub Actions status checks
       statuses: write
-      
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -61,4 +61,3 @@ jobs:
           commit_message: "[chore] fix linting issues"
           commit_user_name: super-linter
           commit_user_email: super-linter@super-linter.dev
-    
