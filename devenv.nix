@@ -9,12 +9,23 @@
     taplo
     tokei
     watchexec
+
+    cargo-nextest
+    cargo-llvm-cov
   ];
 
   # https://devenv.sh/languages/
   languages.rust = {
     enable = true;
     channel = "nightly";
+    components = [
+      "rustc"
+      "cargo"
+      "clippy"
+      "rustfmt"
+      "rust-analyzer"
+      "llvm-tools-preview"
+    ];
   };
 
   # https://devenv.sh/processes/
