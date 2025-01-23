@@ -377,7 +377,7 @@ impl NetAggregateRoot for Entity<Net> {
 
 #[cfg(test)]
 mod tests {
-    use std::thread::AccessError;
+    
 
     use super::*;
 
@@ -457,12 +457,11 @@ mod tests {
         net.remove_status(id).unwrap();
 
         assert!(
-            net.data
+            !net.data
                 .schema
                 .status
                 .iter()
                 .any(|status| status.data.name != default && status.data.name != accepted)
-                == false
         );
     }
 
