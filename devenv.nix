@@ -29,7 +29,8 @@
   };
 
   # https://devenv.sh/processes/
-  # processes.test.exec = "watchexec -e rs -r 'cargo llvm-cov' nextest";
+  # processes = {
+  # };
 
   # https://devenv.sh/services/
   # services.postgres.enable = true;
