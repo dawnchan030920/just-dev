@@ -13,7 +13,6 @@ jobs:
     name: Collect test coverage
     runs-on: ubuntu-latest
     env:
-      RUSTFLAGS: -D errors
       CARGO_TERM_COLOR: always
     steps:
       - uses: actions/checkout@v4
@@ -29,7 +28,7 @@ jobs:
 
       - name: Collect coverage data
         run: |
-          cargo llvm-cov --all-features --workspace --codecov --output-path codecov.json
+          cargo llvm-cov nextest --all-features --workspace --codecov --output-path codecov.json
       - name: Upload coverage data to codecov
         uses: codecov/codecov-action@v5
         env:
