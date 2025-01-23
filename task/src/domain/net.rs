@@ -254,6 +254,13 @@ impl NetAggregateRoot for Entity<Net> {
             });
         }
 
+        if self.data.tasks.contains_key(&task_id) {
+            return Err(TaskDomainError::TaskAlreadyInNet {
+                task: task_id,
+                net: self.id,
+            });
+        }
+
         self.data.tasks.insert(task_id, self.data.schema.default);
         self.data.relations.add_node(task_id);
 
@@ -304,6 +311,13 @@ impl NetAggregateRoot for Entity<Net> {
     }
 
     fn remove_task(&mut self, task_id: Id<Task>) -> TaskDomainResult<()> {
+        if !self.data.tasks.contains_key(&task_id) {
+            return Err(TaskDomainError::TaskNotFoundInNet {
+                net: self.id,
+                task: task_id,
+            });
+        }
+
         self.data.tasks.remove(&task_id);
         self.data.relations.remove_node(task_id);
 
@@ -376,6 +390,7 @@ impl NetAggregateRoot for Entity<Net> {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
 
     use super::*;
@@ -513,5 +528,102 @@ mod tests {
             .status
             .iter()
             .any(|status| status.id == accepted_id));
+    }
+
+    #[test]
+    fn test_add_new_task() {
+        let default = "Default";
+        let accepted = "Accepted";
+
+        let mut net = Entity::new(default.to_string(), accepted.to_string());
+
+        let task_id = Id::<Task>::new();
+        net.add_task(task_id).unwrap();
+
+        assert_eq!(
+            *net.data.tasks.get(&task_id).unwrap(),
+            net.data.schema.default
+        );
+    }
+
+    #[test]
+    fn test_add_existing_task_error() {
+        let default = "Default";
+        let accepted = "Accepted";
+
+        let mut net = Entity::new(default.to_string(), accepted.to_string());
+
+        let task_id = Id::<Task>::new();
+        net.add_task(task_id).unwrap();
+
+        assert!(net.add_task(task_id).is_err());
+    }
+
+    #[test]
+    fn test_remove_task() {
+        let default = "Default";
+        let accepted = "Accepted";
+
+        let mut net = Entity::new(default.to_string(), accepted.to_string());
+
+        let task_id = Id::<Task>::new();
+        net.add_task(task_id).unwrap();
+
+        net.remove_task(task_id).unwrap();
+
+        assert!(!net.data.tasks.contains_key(&task_id));
+    }
+
+    #[test]
+    fn test_remove_nonexistent_task() {
+        let default = "Default";
+        let accepted = "Accepted";
+
+        let mut net = Entity::new(default.to_string(), accepted.to_string());
+
+        let task_id = Id::<Task>::new();
+
+        assert!(net.remove_task(task_id).is_err());
+    }
+
+    #[test]
+    fn test_new_relation() {
+        let default = "Default";
+        let accepted = "Accepted";
+
+        let mut net = Entity::new(default.to_string(), accepted.to_string());
+        let task1_id = Id::new();
+        let task2_id = Id::new();
+        net.add_task(task1_id).unwrap();
+        net.add_task(task2_id).unwrap();
+
+        net.new_relation(task1_id, task2_id, RelationType::Compose)
+            .unwrap();
+
+        assert!(net.data.relations.contains_edge(task1_id, task2_id));
+        assert!(!net.data.relations.contains_edge(task2_id, task1_id));
+    }
+
+    #[test]
+    fn test_new_relation_cycle_error() {
+        let default = "Default";
+        let accepted = "Accepted";
+
+        let mut net = Entity::new(default.to_string(), accepted.to_string());
+        let task1_id = Id::new();
+        let task2_id = Id::new();
+        let task3_id = Id::new();
+        net.add_task(task1_id).unwrap();
+        net.add_task(task2_id).unwrap();
+        net.add_task(task3_id).unwrap();
+
+        net.new_relation(task1_id, task2_id, RelationType::Compose)
+            .unwrap();
+        net.new_relation(task2_id, task3_id, RelationType::Require)
+            .unwrap();
+
+        assert!(net
+            .new_relation(task3_id, task1_id, RelationType::Compose)
+            .is_err());
     }
 }
