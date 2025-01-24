@@ -8,13 +8,29 @@
   packages = with pkgs; [
     taplo
     tokei
+    watchexec
+
+    cargo-nextest
+    cargo-llvm-cov
   ];
 
   # https://devenv.sh/languages/
-  languages.rust.enable = true;
+  languages.rust = {
+    enable = true;
+    channel = "nightly";
+    components = [
+      "rustc"
+      "cargo"
+      "clippy"
+      "rustfmt"
+      "rust-analyzer"
+      "llvm-tools-preview"
+    ];
+  };
 
   # https://devenv.sh/processes/
-  # processes.cargo-watch.exec = "cargo-watch";
+  # processes = {
+  # };
 
   # https://devenv.sh/services/
   # services.postgres.enable = true;

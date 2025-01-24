@@ -23,7 +23,7 @@ impl<T> Ord for Id<T> {
 
 impl<T> PartialOrd for Id<T> {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.id.partial_cmp(&other.id)
+        Some(self.cmp(other))
     }
 }
 
@@ -39,16 +39,7 @@ impl<T> Copy for Id<T> {}
 
 impl<T> Clone for Id<T> {
     fn clone(&self) -> Self {
-        Self {
-            id: self.id,
-            phantom: self.phantom,
-        }
-    }
-}
-
-impl<T> Default for Id<T> {
-    fn default() -> Self {
-        Self::new()
+        *self
     }
 }
 
@@ -59,6 +50,12 @@ impl<T> Id<T> {
             id: Uuid::new_v4(),
             phantom: PhantomData,
         }
+    }
+}
+
+impl<T> Default for Id<T> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
