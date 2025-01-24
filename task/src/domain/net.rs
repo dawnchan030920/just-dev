@@ -771,7 +771,7 @@ mod tests {
     }
 
     #[test]
-    fn test_requirement_relation() {
+    fn test_requirement_compose_relation() {
         let default = "Default";
         let accepted = "Accepted";
 
@@ -813,7 +813,7 @@ mod tests {
     }
 
     #[test]
-    fn test_requirement_relation_2() {
+    fn test_requirement_relation() {
         let default = "Default";
         let accepted = "Accepted";
 
